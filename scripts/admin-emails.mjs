@@ -9,4 +9,4 @@
  * An empty list fails closed: nobody is an admin.
  * Do not invent an address here.
  */
-export const ADMIN_EMAILS = [];
+export const ADMIN_EMAILS = ['adriancatindig3@gmail.com'];

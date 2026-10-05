@@ -38,11 +38,11 @@ Public client config lives in `.env.example` (committed) and `.env.local` (gitig
 | `VITE_FIREBASE_MEASUREMENT_ID` | Analytics, started only when the browser supports it |
 | `VITE_CLOUDINARY_CLOUD_NAME` | `df3fvlapt` |
 | `VITE_CLOUDINARY_UPLOAD_PRESET` | Unsigned preset `digital-card` |
-| `VITE_ADMIN_EMAILS` | Comma-separated admin emails. Empty by default. |
+| `VITE_ADMIN_EMAILS` | Comma-separated admin emails. Set to adriancatindig3@gmail.com. |
 
 ## Admin email (one place)
 
-Admin emails start empty, so the admin UI and Firestore rules fail closed. Nobody is an admin until you add one.
+The only admin is adriancatindig3@gmail.com. Every other account stays fail closed.
 
 1. Edit `scripts/admin-emails.mjs` (`ADMIN_EMAILS`).
 2. Run `npm run sync-admin-rules`.

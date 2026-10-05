@@ -5,7 +5,7 @@ service cloud.firestore {
     // An empty list fails closed. Nobody is an admin until an email is added.
     // ADMIN_ALLOWLIST_START
     function adminEmails() {
-      return [];
+      return ['adriancatindig3@gmail.com'];
     }
     // ADMIN_ALLOWLIST_END
 
