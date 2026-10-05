@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
-import type { CardModel } from '../../lib/card';
+import { linkItems, type CardModel } from '../../lib/card';
 import { validateEmail, validatePhone } from '../../lib/platforms';
+import { PlatformIcon } from '../Icons';
 import { CardLinks } from './CardLinks';
 import { Avatar, Cover } from './Media';
 
@@ -30,40 +31,77 @@ function SplitCover({ card }: Props) {
   );
 }
 
-function Centered({ card }: Props) {
+function Pin() {
   return (
-    <article className="tpl tpl-02">
-      <Avatar src={card.profilePhoto} name={card.displayName} />
-      <h1>{card.displayName}</h1>
-      {card.headline ? <p className="headline">{card.headline}</p> : null}
-      <div className="rule" />
-      {card.bio ? <p className="bio">{card.bio}</p> : null}
-      {card.company ? <p className="company">{card.company}</p> : null}
-      {card.location ? <p className="location">{card.location}</p> : null}
-      <div className="rule" />
-      <CardLinks card={card} variant="rows" />
-    </article>
+    <svg className="pin" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 2.8a6.2 6.2 0 0 0-6.2 6.2c0 4.5 6.2 12.2 6.2 12.2s6.2-7.7 6.2-12.2A6.2 6.2 0 0 0 12 2.8zm0 8.4a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4z"
+      />
+    </svg>
   );
 }
 
-function Dark({ card }: Props) {
+function Studio({ card, tone }: { card: CardModel; tone: 'paper' | 'forest' | 'navy' }) {
+  const phone = validatePhone(card.phone);
+  const email = validateEmail(card.contactEmail);
+  const contacts = [phone, email].filter((item) => item.ok && !item.empty).length;
+  const links = linkItems(card).filter((item) => item.id !== 'phone' && item.id !== 'email').length;
   return (
-    <article className="tpl tpl-03 dark">
-      <header className="side">
+    <article className={`tpl studio tone-${tone}`}>
+      <header className="studio-id">
         <Avatar src={card.profilePhoto} name={card.displayName} />
         <div>
           <h1>{card.displayName}</h1>
           {card.headline ? <p className="headline">{card.headline}</p> : null}
+          {card.company ? (
+            <p className="company">
+              <Pin />
+              {card.company}
+            </p>
+          ) : null}
         </div>
       </header>
+      <div className="studio-rule" />
       {card.bio ? <p className="bio">{card.bio}</p> : null}
-      <div className="facts">
-        {card.company ? <p>{card.company}</p> : null}
-        {card.location ? <p className="location">{card.location}</p> : null}
+      <div className="studio-stats">
+        <p>
+          <strong>{contacts}</strong>
+          <span>Contact</span>
+        </p>
+        <p>
+          <strong>{links}</strong>
+          <span>Links</span>
+        </p>
       </div>
-      <CardLinks card={card} variant="rows" />
+      {contacts > 0 ? (
+        <section className="studio-contact">
+          <h2>Contact</h2>
+          {email.ok && !email.empty ? (
+            <a href={email.href}>
+              <PlatformIcon id="email" />
+              <span>{card.contactEmail.trim()}</span>
+            </a>
+          ) : null}
+          {phone.ok && !phone.empty ? (
+            <a href={phone.tel}>
+              <PlatformIcon id="phone" />
+              <span>{card.phone.trim()}</span>
+            </a>
+          ) : null}
+        </section>
+      ) : null}
+      <CardLinks card={card} variant="icons" omit={['phone', 'email']} />
     </article>
   );
+}
+
+function Centered({ card }: Props) {
+  return <Studio card={card} tone="paper" />;
+}
+
+function Dark({ card }: Props) {
+  return <Studio card={card} tone="forest" />;
 }
 
 function SideRail({ card }: Props) {
@@ -190,19 +228,7 @@ function Portrait({ card }: Props) {
 }
 
 function Formal({ card }: Props) {
-  return (
-    <article className="tpl tpl-10 dark">
-      <Avatar src={card.profilePhoto} name={card.displayName} />
-      <div className="rule" />
-      <h1>{card.displayName}</h1>
-      <div className="rule" />
-      {card.headline ? <p className="headline">{card.headline}</p> : null}
-      {card.company ? <p className="company">{card.company}</p> : null}
-      {card.location ? <p className="location">{card.location}</p> : null}
-      {card.bio ? <p className="bio">{card.bio}</p> : null}
-      <CardLinks card={card} variant="icons" />
-    </article>
-  );
+  return <Studio card={card} tone="navy" />;
 }
 
 function Grouped({ card }: Props) {
@@ -440,15 +466,15 @@ function LinkSheet({ card }: Props) {
 
 export const TEMPLATES: { id: string; name: string; Component: ComponentType<Props> }[] = [
   { id: 'card-01', name: 'Split cover', Component: SplitCover },
-  { id: 'card-02', name: 'Centered', Component: Centered },
-  { id: 'card-03', name: 'Dark', Component: Dark },
+  { id: 'card-02', name: 'Paper', Component: Centered },
+  { id: 'card-03', name: 'Forest', Component: Dark },
   { id: 'card-04', name: 'Side rail', Component: SideRail },
   { id: 'card-05', name: 'Editorial', Component: Editorial },
   { id: 'card-06', name: 'Inset', Component: Inset },
   { id: 'card-07', name: 'Identity', Component: Identity },
   { id: 'card-08', name: 'Sheet', Component: Sheet },
   { id: 'card-09', name: 'Portrait', Component: Portrait },
-  { id: 'card-10', name: 'Formal', Component: Formal },
+  { id: 'card-10', name: 'Navy', Component: Formal },
   { id: 'card-11', name: 'Grouped', Component: Grouped },
   { id: 'card-12', name: 'Type first', Component: TypeFirst },
   { id: 'card-13', name: 'Full bleed', Component: FullBleed },

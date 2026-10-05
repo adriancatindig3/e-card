@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizeInviteCode } from './invites';
 import {
   PLATFORM_HOSTS,
+  detectPlatformLink,
   hostnameAllowed,
   validateEmail,
   validatePhone,
@@ -105,6 +106,38 @@ describe('validatePlatformLink', () => {
     expect(hostnameAllowed('evilfacebook.com', ['facebook.com'])).toBe(false);
     expect(hostnameAllowed('www.facebook.com', ['facebook.com'])).toBe(true);
     expect(hostnameAllowed('facebook.com.attacker.com', ['facebook.com'])).toBe(false);
+  });
+});
+
+describe('detectPlatformLink', () => {
+  it('detects the platform from a pasted url', () => {
+    expect(detectPlatformLink('https://instagram.com/ada')).toMatchObject({
+      ok: true,
+      platform: 'instagram',
+    });
+    expect(detectPlatformLink('https://x.com/ada')).toMatchObject({ ok: true, platform: 'x' });
+    expect(detectPlatformLink('https://www.linkedin.com/in/ada')).toMatchObject({
+      ok: true,
+      platform: 'linkedin',
+    });
+    expect(detectPlatformLink('facebook.com/ada')).toMatchObject({ ok: true, platform: 'facebook' });
+  });
+
+  it('treats a phone number as WhatsApp and any other site as a website', () => {
+    expect(detectPlatformLink('+1 555 123 4567')).toMatchObject({
+      ok: true,
+      platform: 'whatsapp',
+      href: 'https://wa.me/15551234567',
+    });
+    expect(detectPlatformLink('https://example.com/work')).toMatchObject({
+      ok: true,
+      platform: 'website',
+    });
+  });
+
+  it('rejects a paste that is not a link', () => {
+    const result = detectPlatformLink('not a link');
+    expect(result.ok).toBe(false);
   });
 });
 

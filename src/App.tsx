@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { AppShell } from './components/AppShell';
 import { useAuth } from './context/AuthContext';
 import { adminEmails, isAllowlistedAdmin } from './lib/admin';
 import { AdminPage } from './pages/AdminPage';
@@ -80,7 +81,7 @@ function ApprovedRoute({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/" replace />;
   if (!profile) return <Loading label="Setting up your card" />;
   if (profile.status !== 'approved') return <Navigate to={homeFor(profile.role, profile.status, profile.email)} replace />;
-  return children;
+  return <AppShell>{children}</AppShell>;
 }
 
 function AdminRoute() {

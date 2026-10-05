@@ -105,6 +105,23 @@ function validateWebsite(trimmed: string): FieldResult {
   return { ok: true, empty: false, href: url.toString() };
 }
 
+const DETECT_ORDER = PLATFORM_IDS.filter((id) => id !== 'website');
+
+/** Recognize a pasted URL or WhatsApp number and return the matching platform. */
+export function detectPlatformLink(raw: string):
+  | { ok: true; platform: PlatformId; href: string }
+  | { ok: false; error: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { ok: false, error: 'Paste a link first.' };
+  for (const platform of DETECT_ORDER) {
+    const result = validatePlatformLink(platform, trimmed);
+    if (result.ok && !result.empty) return { ok: true, platform, href: result.href };
+  }
+  const website = validatePlatformLink('website', trimmed);
+  if (website.ok && !website.empty) return { ok: true, platform: 'website', href: website.href };
+  return { ok: false, error: 'Paste a full link, like https://instagram.com/you or a WhatsApp number.' };
+}
+
 export function validatePlatformLink(platform: PlatformId, raw: string): FieldResult {
   const trimmed = raw.trim();
   if (!trimmed) return { ok: true, empty: true };

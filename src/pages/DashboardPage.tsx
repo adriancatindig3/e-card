@@ -7,7 +7,7 @@ import { normalizeSlug } from '../lib/slug';
 import { changeSlug } from '../lib/users';
 
 export function DashboardPage() {
-  const { profile, signOutUser } = useAuth();
+  const { profile } = useAuth();
   const [slug, setSlug] = useState(profile?.slug ?? '');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,50 +50,52 @@ export function DashboardPage() {
   if (!profile) return null;
 
   return (
-    <main className="screen">
-      <div className="header-row">
-        <p className="brand">Digital Card</p>
-        <button className="btn btn-plain" type="button" onClick={() => void signOutUser()}>
-          Sign out
-        </button>
-      </div>
-      <h1>Your card</h1>
+    <main className="screen dashboard">
+      <h1>Dashboard</h1>
       <p className="lede">{profile.displayName}</p>
-      <div className="url-line" style={{ marginTop: 22 }}>
-        <div className="url-box">
-          <span>{url}</span>
-        </div>
-        <button className="btn btn-quiet" type="button" onClick={() => void copy()}>
-          Copy
-        </button>
+      <div className="dash-grid">
+        <section className="panel dash-panel">
+          <h2>Your card</h2>
+          <div className="url-line">
+            <div className="url-box">
+              <span>{url}</span>
+            </div>
+            <button className="btn btn-quiet" type="button" onClick={() => void copy()}>
+              Copy
+            </button>
+          </div>
+          {message ? <p className="note">{message}</p> : null}
+          <form className="stack" onSubmit={saveSlug}>
+            <label className="field">
+              <span>Public link</span>
+              <input value={slug} onChange={(event) => setSlug(event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+            </label>
+            {error ? <p className="field-error">{error}</p> : null}
+            <button className="btn btn-quiet" type="submit" disabled={busy}>
+              {busy ? 'Saving…' : 'Save link'}
+            </button>
+          </form>
+          <div className="stack">
+            <Link className="btn btn-dark" to="/app/edit">
+              Edit profile
+            </Link>
+            {saved ? (
+              <Link className="btn btn-quiet" to="/app/templates">
+                Themes
+              </Link>
+            ) : (
+              <p className="note">Save your profile before choosing a theme.</p>
+            )}
+          </div>
+        </section>
+        <section className="panel dash-panel qr-panel">
+          <h2>My QR</h2>
+          <div className="qr-wrap">
+            <QRCodeSVG value={url} size={196} bgColor="#ffffff" fgColor="#1d1d1f" level="M" />
+            <p>Scan to open your card</p>
+          </div>
+        </section>
       </div>
-      {message ? <p className="note">{message}</p> : null}
-      <div className="qr-wrap">
-        <QRCodeSVG value={url} size={168} bgColor="#ffffff" fgColor="#1d1d1f" level="M" />
-        <p>Scan to open your card</p>
-      </div>
-      <div className="stack">
-        <Link className="btn btn-primary" to="/app/edit">
-          Edit card
-        </Link>
-        {saved ? (
-          <Link className="btn btn-quiet" to="/app/templates">
-            Choose layout
-          </Link>
-        ) : (
-          <p className="note">Save your card before choosing a layout.</p>
-        )}
-      </div>
-      <form className="section stack" onSubmit={saveSlug}>
-        <label className="field">
-          <span>Public link</span>
-          <input value={slug} onChange={(event) => setSlug(event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-        </label>
-        {error ? <p className="field-error">{error}</p> : null}
-        <button className="btn btn-quiet" type="submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Save link'}
-        </button>
-      </form>
     </main>
   );
 }

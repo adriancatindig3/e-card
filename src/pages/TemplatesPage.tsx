@@ -5,18 +5,18 @@ import { useAuth } from '../context/AuthContext';
 import { saveTemplate, toCardModel } from '../lib/users';
 
 export function TemplatesPage() {
-  const { profile, signOutUser } = useAuth();
+  const { profile } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!profile) return null;
   if (!profile.updatedAt) {
     return (
-      <main className="screen">
-        <h1>Layout</h1>
-        <p className="lede">Save your card first. Layouts preview the details you saved.</p>
-        <Link className="btn btn-primary" to="/app/edit" style={{ marginTop: 24 }}>
-          Edit card
+      <main className="screen themes">
+        <h1>Themes</h1>
+        <p className="lede">Save your card first. Themes preview the details you saved.</p>
+        <Link className="btn btn-dark" to="/app/edit" style={{ marginTop: 24, maxWidth: 280 }}>
+          Edit profile
         </Link>
       </main>
     );
@@ -38,32 +38,40 @@ export function TemplatesPage() {
   }
 
   return (
-    <main className="screen">
-      <div className="header-row">
-        <Link className="btn btn-plain" to="/app">Back</Link>
-        <button className="btn btn-plain" type="button" onClick={() => void signOutUser()}>Sign out</button>
-      </div>
-      <h1 style={{ marginTop: 12 }}>Layout</h1>
-      <p className="lede">Every preview uses the card you saved.</p>
+    <main className="screen themes">
+      <header className="themes-head">
+        <h1>Themes</h1>
+        <p className="lede">Click Select on any layout to apply it.</p>
+      </header>
       {error ? <p className="field-error">{error}</p> : null}
-      {TEMPLATES.map((template) => {
-        const current = profile.templateId === template.id;
-        return (
-          <section className="layout-choice" key={template.id}>
-            <div className="choice-head">
-              <h2>{template.name}</h2>
-              {current ? (
-                <span className="pill">Current</span>
-              ) : (
-                <button className="btn btn-plain" type="button" disabled={busy !== null} onClick={() => void choose(template.id)}>
-                  {busy === template.id ? 'Saving…' : 'Use this layout'}
-                </button>
-              )}
-            </div>
-            <CardView card={card} templateId={template.id} mode="preview" />
-          </section>
-        );
-      })}
+      <div className="layout-grid">
+        {[...TEMPLATES].sort((a, b) => {
+          const featured = ['card-02', 'card-03', 'card-10'];
+          const ai = featured.indexOf(a.id);
+          const bi = featured.indexOf(b.id);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        }).map((template) => {
+          const current = profile.templateId === template.id;
+          return (
+            <section className="layout-card" key={template.id}>
+              <div className="layout-preview">
+                <CardView card={card} templateId={template.id} mode="preview" />
+              </div>
+              <button
+                className={`btn btn-dark ${current ? 'is-current' : ''}`}
+                type="button"
+                disabled={busy !== null || current}
+                onClick={() => void choose(template.id)}
+              >
+                {busy === template.id ? 'Saving…' : current ? 'Selected' : `Select ${template.name}`}
+              </button>
+            </section>
+          );
+        })}
+      </div>
     </main>
   );
 }
