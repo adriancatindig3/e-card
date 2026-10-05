@@ -1,0 +1,207 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Edit scripts/admin-emails.mjs, then run: npm run sync-admin-rules
+    // An empty list fails closed. Nobody is an admin until an email is added.
+    // ADMIN_ALLOWLIST_START
+    function adminEmails() {
+      return [];
+    }
+    // ADMIN_ALLOWLIST_END
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
+        && adminEmails().size() > 0
+        && request.auth.token.email.lower() in adminEmails();
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validSlug(slug) {
+      return slug is string && slug.matches('^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$');
+    }
+
+    function httpsOrEmpty(value) {
+      return value is string
+        && value.size() <= 2000
+        && (value == '' || value.matches('^https://.+'));
+    }
+
+    function ownerProfileUpdate() {
+      let next = request.resource.data;
+      let changed = next.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'displayName', 'headline', 'company', 'location', 'bio', 'phone',
+          'contactEmail', 'profilePhoto', 'coverPhoto', 'links', 'templateId',
+          'slug', 'photoURL', 'updatedAt'
+        ])
+        && next.keys().hasAll([
+          'email', 'displayName', 'photoURL', 'createdAt', 'status', 'role', 'slug',
+          'headline', 'company', 'location', 'bio', 'phone', 'contactEmail',
+          'profilePhoto', 'coverPhoto', 'links', 'templateId', 'updatedAt'
+        ])
+        && next.role == resource.data.role
+        && next.status == resource.data.status
+        && next.email == resource.data.email
+        && next.createdAt == resource.data.createdAt
+        && next.displayName is string
+        && next.displayName.size() > 0
+        && next.displayName.size() <= 80
+        && next.headline is string
+        && next.headline.size() <= 80
+        && next.company is string
+        && next.company.size() <= 80
+        && next.location is string
+        && next.location.size() <= 80
+        && next.bio is string
+        && next.bio.size() <= 600
+        && next.phone is string
+        && next.phone.size() <= 40
+        && next.contactEmail is string
+        && next.contactEmail.size() <= 120
+        && validSlug(next.slug)
+        && httpsOrEmpty(next.profilePhoto)
+        && httpsOrEmpty(next.coverPhoto)
+        && next.photoURL is string
+        && next.photoURL.size() <= 2000
+        && next.links is map
+        && next.links.size() <= 14
+        && next.templateId is string
+        && next.templateId.matches('^card-(0[1-9]|1[0-9]|20)$')
+        && next.updatedAt == request.time
+        && (
+          next.slug == resource.data.slug
+          || (
+            getAfter(/databases/$(database)/documents/slugs/$(next.slug)).data.uid == request.auth.uid
+            && !existsAfter(/databases/$(database)/documents/slugs/$(resource.data.slug))
+          )
+        );
+    }
+
+    function ownerRedeem() {
+      let next = request.resource.data;
+      let code = next.redeemedCode;
+      let path = /databases/$(database)/documents/inviteCodes/$(code);
+      return resource.data.status == 'pending'
+        && resource.data.role == 'user'
+        && next.status == 'approved'
+        && next.role == resource.data.role
+        && next.diff(resource.data).affectedKeys().hasOnly(['status', 'redeemedCode'])
+        && code is string
+        && code.size() > 0
+        && request.auth.token.email != null
+        && exists(path)
+        && get(path).data.used == false
+        && getAfter(path).data.used == true
+        && getAfter(path).data.usedBy == request.auth.uid
+        && getAfter(path).data.usedEmail == request.auth.token.email;
+    }
+
+    match /users/{uid} {
+      allow get: if resource.data.status == 'approved' || isOwner(uid) || isAdmin();
+
+      allow list: if isAdmin() || resource.data.status == 'approved';
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'email', 'displayName', 'photoURL', 'createdAt', 'status', 'role', 'slug',
+          'headline', 'company', 'location', 'bio', 'phone', 'contactEmail',
+          'profilePhoto', 'coverPhoto', 'links', 'templateId'
+        ])
+        && request.auth.token.email != null
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.photoURL is string
+        && request.resource.data.photoURL.size() <= 2000
+        && request.resource.data.createdAt == request.time
+        && validSlug(request.resource.data.slug)
+        && request.resource.data.headline is string
+        && request.resource.data.headline.size() <= 80
+        && request.resource.data.company is string
+        && request.resource.data.company.size() <= 80
+        && request.resource.data.location is string
+        && request.resource.data.location.size() <= 80
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 600
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.contactEmail is string
+        && request.resource.data.contactEmail.size() <= 120
+        && httpsOrEmpty(request.resource.data.profilePhoto)
+        && httpsOrEmpty(request.resource.data.coverPhoto)
+        && request.resource.data.links is map
+        && request.resource.data.links.size() <= 14
+        && request.resource.data.templateId is string
+        && request.resource.data.templateId.matches('^card-(0[1-9]|1[0-9]|20)$')
+        && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug)).data.uid == request.auth.uid
+        && (
+          (
+            !isAdmin()
+            && request.resource.data.role == 'user'
+            && request.resource.data.status == 'pending'
+          )
+          || (
+            isAdmin()
+            && request.resource.data.role == 'admin'
+            && request.resource.data.status == 'approved'
+          )
+        );
+
+      allow update: if isAdmin()
+        || (isOwner(uid) && ownerProfileUpdate())
+        || (isOwner(uid) && ownerRedeem());
+
+      allow delete: if isAdmin();
+    }
+
+    match /inviteCodes/{code} {
+      allow get: if signedIn();
+      allow list: if isAdmin();
+
+      allow create: if isAdmin()
+        && code.matches('^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$')
+        && request.resource.data.keys().hasOnly(['code', 'createdAt', 'createdBy', 'used'])
+        && request.resource.data.code == code
+        && request.resource.data.used == false
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && request.auth.token.email != null
+        && resource.data.used == false
+        && request.resource.data.used == true
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.usedEmail == request.auth.token.email
+        && request.resource.data.usedAt == request.time
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedBy', 'usedAt', 'usedEmail']);
+
+      allow delete: if isAdmin();
+    }
+
+    match /slugs/{slug} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn()
+        && validSlug(slug)
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if false;
+
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+  }
+}
